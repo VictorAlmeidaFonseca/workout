@@ -1,95 +1,125 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client"
+
+import { Collapse, CollapseProps, Table, Switch } from "antd"
+import type { TableProps } from "antd"
+const { Column, ColumnGroup } = Table
+
+import { makeWorkout, Workout } from "@/infra/workout"
+import { useEffect, useState } from "react"
+import { AnyObject } from "antd/es/_util/type"
+
+interface DataType {
+    key: number
+    exercise: string
+    series: string | number
+    repetitions: number | string
+    rest: number | string | null
+    weekDay: string
+}
+
 
 export default function Home() {
-  return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
+    const [workout, setWorkout] = useState<any[]>([])
 
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
+    const fetchWorkout = async () => {
+        const workout = makeWorkout()
+        const toSet = Array.from({ length: 15 }, (_, i) => {
+            const index = i + 1
+            const filterByIndex = workout.filter((w) => w.week === index)
 
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
+            const daysOfWeek: { [key: string]: any[] } = {
+                Tuesday: [],
+                Wednesday: [],
+                Thursday: [],
+                Saturday: [],
+            }
+            filterByIndex.forEach((w) => {
+                daysOfWeek[w.weekDay].push({
+                    key: daysOfWeek[w.weekDay].length,
+                    exercise: w.exercise,
+                    series: w.series,
+                    repetitions: w.repetitions,
+                    rest: w.rest,
+                    kg: w.kg,
+                    done: w.done,
+                })
+            })
 
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
+            console.log("daysOfWeek", daysOfWeek)
+            return daysOfWeek
 
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
+         
+        })
 
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  );
+        setWorkout(toSet)
+    }
+
+    useEffect(() => {
+        const init = async () => {
+            await fetchWorkout()
+        }
+
+        init()
+            .then((_) => console.log("Workout loaded"))
+            .catch(console.error)
+    }, [])
+
+        const handleDoneChange = (checked: boolean, record: AnyObject, weekIndex: number | undefined, dayKey: string | number | undefined) => {
+            console.log("Checked:", checked, "Record:", record)
+        
+            setWorkout((currentWorkout) => {
+                return currentWorkout.map((week, index) => {
+                    if (index === weekIndex && dayKey !== undefined) {
+                        const newWeek = { ...week } 
+                        newWeek[dayKey] = newWeek[dayKey].map((item: { key: any }) => {
+                            if (item.key === record.key) {
+                                return { ...item, done: checked } 
+                            }
+                            return item
+                        })
+                        return newWeek
+                    }
+                    return week
+                })
+            })
+        }
+
+
+    const items: CollapseProps["items"] = workout.map((w, index) => {
+        const label = `Week ${index + 1}`
+        return {
+            key: index,
+            label,
+            children: Object.entries(w).map(([key, value]) => (
+                <Table dataSource={value as readonly Object[]} pagination={false}>
+                    <ColumnGroup title={key}>
+                        <Column title="Exercise" dataIndex="exercise" key="exercise" />
+                        <Column title="Series" dataIndex="series" key="series" />
+                        <Column title="Repetitions" dataIndex="repetitions" key="repetitions" />
+                        <Column title="Rest" dataIndex="rest" key="rest" />
+                        <Column title="Kg" dataIndex="kg" key="kg" />
+                        <Column
+                            title="Done"
+                            dataIndex="done"
+                            key="done"
+                            render={(done, record) => (
+                                <Switch
+                                    checked={done}
+                                    onChange={(checked) => handleDoneChange(checked, record, index, key)}
+                                />
+                            )}
+                        />
+                    </ColumnGroup>
+                </Table>
+            )),
+        }
+    })
+
+
+    return (
+        <main className={""}>
+            <h2>100 Days Challenge - Gym Workout</h2>
+            <Collapse items={items} defaultActiveKey={["1"]} />
+        </main>
+    )
 }
