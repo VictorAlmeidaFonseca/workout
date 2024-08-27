@@ -1,21 +1,11 @@
 "use client"
 
 import { Collapse, CollapseProps, Table, Switch } from "antd"
-import type { TableProps } from "antd"
 const { Column, ColumnGroup } = Table
 
 import { makeWorkout, Workout } from "@/infra/workout"
 import { useEffect, useState } from "react"
 import { AnyObject } from "antd/es/_util/type"
-
-interface DataType {
-    key: number
-    exercise: string
-    series: string | number
-    repetitions: number | string
-    rest: number | string | null
-    weekDay: string
-}
 
 
 export default function Home() {
@@ -88,10 +78,10 @@ export default function Home() {
     const items: CollapseProps["items"] = workout.map((w, index) => {
         const label = `Week ${index + 1}`
         return {
-            key: index,
+            key: `week-${index}`,
             label,
-            children: Object.entries(w).map(([key, value]) => (
-                <Table dataSource={value as readonly Object[]} pagination={false}>
+            children: Object.entries(w).map(([key, value], dayIndex) => (
+                <Table dataSource={value as readonly Object[]} pagination={false} key={`day-${index}-${dayIndex}`}>
                     <ColumnGroup title={key}>
                         <Column title="Exercise" dataIndex="exercise" key="exercise" />
                         <Column title="Series" dataIndex="series" key="series" />
